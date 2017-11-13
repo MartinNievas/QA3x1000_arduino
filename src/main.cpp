@@ -6,15 +6,6 @@
 #include <Servo.h>
 #include <functions.h>
 
-
-
-#define PID_OUT_LIMIT 30
-
-#define CALIBRATE_ESC 
-// #define TUNNING_PID
-#define SHOW_ANGLE_DATA 
-#define AUTOTUNE_PID 
-
 Kalman kalmanX; // Create the Kalman instances
 Kalman kalmanY;
 
@@ -81,17 +72,15 @@ void setup() {
   Wire.begin();
   TWBR = ((F_CPU / 400000L) - 16) / 2; // Set I2C frequency to 400kHz
 
-  // pinMode(9, OUTPUT);
-  // pinMode(10, OUTPUT);
   ESC1.attach(7);
   ESC3.attach(6);
   ESC2.attach(9);
   ESC4.attach(10);
   
-  pinMode(14, OUTPUT);
-
-  pinMode(15, INPUT);
-  pinMode(16, INPUT);
+  #ifdef CAPTURE_JOYSTICK 
+    pinMode(15, INPUT);
+    pinMode(16, INPUT);
+  #endif
 
   roll_PID.SetOutputLimits(-PID_OUT_LIMIT, PID_OUT_LIMIT);
   pitch_PID.SetOutputLimits(-PID_OUT_LIMIT, PID_OUT_LIMIT);
@@ -140,66 +129,31 @@ void loop() {
       char c = Serial.read();  //gets one byte from serial buffer
       switch(c)
         {
-        case 'q':
-          {
-            Kp += 0.1;
-          }
-        break;
-        case 'a':
-          {
-            Kp -= 0.1;
-          }
-        break;
-        case 'w':
-          {
-            Ki += 0.1;
-          }
-        break;
-        case 's':
-          {
-            Ki -= 0.1;
-          }
-        break;
-        case 'e':
-          {
-            Kd += 0.1;
-          }
-        break;
-        case 'd':
-          {
-            Kd -= 0.1;
-          }
-        break;
-        case 'r':
-          {
-           hovering_throttle += 1;
-          }
-        break;
-        case 'f':
-          {
-            hovering_throttle -= 1;
-          }
-        break;
+        case 'q': Kp += 0.1; break;
+        case 'a': Kp -= 0.1; break;
+        case 'w': Ki += 0.1; break;
+        case 's': Ki -= 0.1; break;
+        case 'e': Kd += 0.1; break;
+        case 'd': Kd -= 0.1; break;
+        case 'r': hovering_throttle += 1; break;
+        case 'f': hovering_throttle -= 1; break;
         }
     }
   }
+  #endif
+  #ifdef TUNNING_PID
+   Serial.print(Kp);Serial.print("\t");
+   Serial.print(Ki);Serial.print("\t");
+   Serial.print(Kd);Serial.print("\t");
+   Serial.print(hovering_throttle);Serial.print("\t");
+  #endif
 
-#endif
-    #ifdef TUNNING_PID
-     Serial.print(Kp);Serial.print("\t");
-     Serial.print(Ki);Serial.print("\t");
-     Serial.print(Kd);Serial.print("\t");
-     Serial.print(hovering_throttle);Serial.print("\t");
-    #endif
-	// digitalToggle(14);
-  // joystick_roll_pwm_value = pulseIn(16, HIGH);
-  // Serial.print(joystick_roll_pwm_value);Serial.print("\t");
-
-  // joystick_pitch_pwm_value = pulseIn(15, HIGH);
-  // Serial.print(joystick_pitch_pwm_value);Serial.print("\t");
-
-  // joystick_pitch_pwm_value = pulseIn(15, HIGH);
-  // Serial.print(joystick_throttle_pwm_value);Serial.print("\t");
+  #ifdef CAPTURE_JOYSTICK
+   joystick_roll_pwm_value = pulseIn(16, HIGH);
+   Serial.print(joystick_roll_pwm_value);Serial.print("\t");
+   joystick_pitch_pwm_value = pulseIn(15, HIGH);
+   Serial.print(joystick_pitch_pwm_value);Serial.print("\t");
+  #endif
 
   /* Update all the values */
   get_IMU_data();
@@ -223,35 +177,23 @@ void loop() {
   roll_PID.Compute();
   pitch_PID.Compute();
 
-  // esc1_assigned_value = hovering_throttle + pid_pitch_output;
-  // esc3_assigned_value = hovering_throttle - pid_pitch_output;
-  // esc2_assigned_value = hovering_throttle + pid_roll_output;
-  // esc4_assigned_value = hovering_throttle - pid_roll_output;
-
   esc1_assigned_value = hovering_throttle + pid_roll_output;
   esc3_assigned_value = hovering_throttle - pid_pitch_output;
   esc2_assigned_value = hovering_throttle + pid_pitch_output;
   esc4_assigned_value = hovering_throttle - pid_roll_output;
 
 
-  // For debug
-  // Serial.print(esc1_assigned_value); Serial.print("\t");
-  // Serial.print(esc3_assigned_value); Serial.print("\t");
-  // Serial.print(esc2_assigned_value); Serial.print("\t");
-  // Serial.print(esc4_assigned_value); Serial.print("\t");
-
-
   esc1_output_mapped = map(esc1_assigned_value, 0, 130, 1000, 2000);
-  // Serial.print(esc1_output_mapped); Serial.print("\t");
-
   esc3_output_mapped = map(esc3_assigned_value, 0, 130, 1000, 2000);
-  // Serial.print(esc3_output_mapped); Serial.print("\t");
-
   esc2_output_mapped = map(esc2_assigned_value, 0, 130, 1000, 2000);
-  // Serial.print(esc2_output_mapped); Serial.print("\t");
-
   esc4_output_mapped = map(esc4_assigned_value, 0, 130, 1000, 2000);
-  // Serial.print(esc4_output_mapped); Serial.print("\t");
+
+  #ifdef SHOW_ESC_OUT
+    Serial.print(esc3_output_mapped); Serial.print("\t");
+    Serial.print(esc1_output_mapped); Serial.print("\t");
+    Serial.print(esc2_output_mapped); Serial.print("\t");
+    Serial.print(esc4_output_mapped); Serial.print("\t");
+  #endif
 
   ESC1.writeMicroseconds(esc1_output_mapped);
   ESC3.writeMicroseconds(esc3_output_mapped);

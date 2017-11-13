@@ -1,6 +1,14 @@
 #ifndef functions_h
 #define functions_h
 
+#define PID_OUT_LIMIT 30
+#define CALIBRATE_ESC 
+// #define TUNNING_PID
+#define SHOW_ANGLE_DATA 
+//#define SHOW_ESC_OUT
+#define AUTOTUNE_PID 
+//#define CAPTURE_JOYSTICK
+
 
 
 void config_i2cData(void);
